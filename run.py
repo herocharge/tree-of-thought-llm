@@ -1,6 +1,7 @@
 import os
 import json
 import argparse
+import tqdm
 
 from tot.tasks import get_task
 from tot.methods.bfs import solve, naive_solve
@@ -15,7 +16,7 @@ def run(args):
         file = f'./logs/{args.task}/{args.backend}_{args.temperature}_{args.method_generate}{args.n_generate_sample}_{args.method_evaluate}{args.n_evaluate_sample}_{args.method_select}{args.n_select_sample}_start{args.task_start_index}_end{args.task_end_index}.json'
     os.makedirs(os.path.dirname(file), exist_ok=True)
 
-    for i in range(args.task_start_index, args.task_end_index):
+    for i in tqdm.tqdm(range(args.task_start_index, args.task_end_index)):
         # solve
         if args.naive_run:
             ys, info = naive_solve(args, task, i) 
@@ -23,7 +24,7 @@ def run(args):
             ys, info = solve(args, task, i)
 
         # log
-        infos = [task.test_output(i, y) for y in ys]
+        infos = [task.test_output(i, y, model=args.backend) for y in (ys)]
         info.update({'idx': i, 'ys': ys, 'infos': infos, 'usage_so_far': gpt_usage(args.backend)})
         logs.append(info)
         with open(file, 'w') as f:
@@ -42,7 +43,7 @@ def run(args):
 
 def parse_args():
     args = argparse.ArgumentParser()
-    args.add_argument('--backend', type=str, choices=['gpt-4', 'gpt-3.5-turbo'], default='gpt-4')
+    args.add_argument('--backend', type=str, choices=['gpt-4', 'gpt-3.5-turbo', 'gemini-1.5-flash'], default='gpt-4')
     args.add_argument('--temperature', type=float, default=0.7)
 
     args.add_argument('--task', type=str, required=True, choices=['game24', 'text', 'crosswords'])
